@@ -32,7 +32,7 @@ class TaskPrompts:
 {{
     "task": {{
         "title": "任务标题",
-        "description": "详细的任务描述，包含用户身份、背景信息、具体目标。描述应该像示例中一样，采用第二人称视角，为用户设定明确的身份和情境",
+        "description": "详细的任务描述，包含用户身份、背景信息、具体目标。描述请采用第二人称视角，为用户设定明确的身份和情境",
         "difficulty": "{difficulty}",
         "expected_turns": "预期对话轮数(4-8轮)",
         "user_context": {{
@@ -43,26 +43,77 @@ class TaskPrompts:
         }}
     }},
     "rubric": {{
+        "tool_usage_expectations": [
+            "工具使用期望1",
+            "工具使用期望2"
+        ],
         "checkpoints": [
             "tool_name1(param1=value1, param2=value2)",
             "tool_name2(param1=value1, param2=value2)",
             "tool_name3(param1=value1, param2=value2)"
         ],
-        "checkpoint_descriptions": [
-            "检查点1：详细描述第一步需要做什么",
-            "检查点2：详细描述第二步需要做什么",
-            "检查点3：详细描述第三步需要做什么"
-        ],
         "success_criteria": [
             "成功标准1",
             "成功标准2",
             "成功标准3"
-        ],
-        "tool_usage_expectations": [
-            "工具使用期望1",
-            "工具使用期望2"
         ]
     }}
 }}
 ```
+"""
+
+
+
+    TASK_GENERATION = """
+You are an **intelligent task design expert**. Your job is to create a **multi-turn conversation task** for a given AI agent with specific tool capabilities, and to design **evaluation rubrics and checkpoints** for assessing its performance.  
+
+---
+**Agent Information:**  
+- Available tools: `{available_tools}`  
+- Tool details:  
+`{tools_details}`  
+
+---
+**Task Design Requirements:**  
+1. **Multi-Turn Conversation**  
+   - The task must require **4–8 conversation turns** to complete.  
+   - It should involve **2–4 available tools** in sequential usage (depending on difficulty).  
+2. **Capability Match**  
+   - Only use tools that the agent currently has access to; do not go beyond its capabilities.  
+3. **Difficulty Level** — `{difficulty}` should follow these definitions:  
+      - `simple`: 2–3 tools, straightforward flow, minimal steps  
+      - `medium`: 3–4 tools, requires conditional reasoning  
+      - `complex`: 4–6 tools, involves multi-step coordination and planning  
+4. **Realistic Scenario**  
+   - The task must be based on real-world or business scenarios with clear practical application.  
+
+---
+**Output Format (MUST be in JSON):**
+```json
+{{
+    "task": {{
+        "title": "Task title",
+        "description": "A detailed second-person-perspective description including the user's role, background, and objectives",
+        "difficulty": "{difficulty}",
+        "expected_turns": "Expected number of turns (4-8)"
+    }},
+    "rubric": {{
+        "tool_usage_expectations": [
+            "Describe expectations for tool usage order and process"
+        ],
+        "checkpoints": [
+            "tool_name(param1=value1, param2=value2)"
+        ],
+        "success_criteria": [
+            "List clear, measurable criteria for task success"
+        ]
+    }}
+}}
+```
+---
+**Important Notes:**  
+- The description must be detailed and immersive.  
+- Checkpoints should allow objective validation of whether the AI followed correct steps.  
+- Success criteria should be specific, measurable, and unambiguous.  
+
 """

@@ -8,6 +8,10 @@ import re
 from typing import Dict, Any, List
 import logging
 
+
+import sys
+from pathlib import Path
+
 from core.base_module import BaseModule
 from core.models import AgentConfig
 from core.exceptions import AgentDataGenException
@@ -71,13 +75,10 @@ class AgentSimulator(BaseModule):
             if not self.current_agent_config:
                 raise AgentDataGenException("No agent configuration set")
             
-            # 准备工具列表
-            # tools_list = self._format_tools_for_agent()
             
             system_prompt = self.current_agent_config.system_prompt
             # 构建用户提示词
-            user_prompt = f"对话历史：\n{conversation_history}\n\n请根据对话历史生成响应。"
-            
+            user_prompt = self.prompts.AGENT_USER.format(conversation_history=conversation_history)
             # 调用LLM生成响应
             response = self.llm_client.generate_completion(
                 prompt=user_prompt,
@@ -85,7 +86,7 @@ class AgentSimulator(BaseModule):
             )
             
             response_content = response.content.strip()
-            
+            print("response_content", response_content)
             # 构建当前消息
             current_message = {"sender": "agent"}
             
@@ -108,49 +109,10 @@ class AgentSimulator(BaseModule):
                 "message": "抱歉，我遇到了一些问题，请稍后再试。"
             }
     
-    def _format_tools_for_agent(self) -> str:
-        """格式化工具信息给智能体"""
-        try:
-            tools_text = []
-            
-            for tool_id in self.current_agent_config.tools:
-                tool_info = self.tools_info.get(tool_id)
-                if tool_info:
-                    tool_name = tool_info.get('name', tool_id)
-                    tool_desc = tool_info.get('description', '')
-                    parameters = tool_info.get('parameters', [])
-                    
-                    # 构建参数信息
-                    param_list = []
-                    for param in parameters:
-                        param_name = param.get('name', '')
-                        param_type = param.get('type', '')
-                        param_desc = param.get('description', '')
-                        required = param.get('required', False)
-                        
-                        param_info = f"  - {param_name} ({param_type})"
-                        if required:
-                            param_info += " [必填]"
-                        param_info += f": {param_desc}"
-                        param_list.append(param_info)
-                    
-                    # 构建工具描述
-                    tool_text = f"**{tool_name}**\n功能：{tool_desc}"
-                    if param_list:
-                        tool_text += "\n参数：\n" + "\n".join(param_list)
-                    
-                    tools_text.append(tool_text)
-            
-            return "\n\n".join(tools_text)
-            
-        except Exception as e:
-            self.logger.error(f"Failed to format tools: {e}")
-            return "工具信息不可用"
-    
     def _contains_tool_call(self, response_content: str) -> bool:
         """
         判断响应是否包含工具调用
-        检查是否包含```json ... ```格式的工具调用
+        支持多种格式：```json ... ```、``` ... ```、普通JSON对象
         
         Args:
             response_content: 响应内容
@@ -159,25 +121,93 @@ class AgentSimulator(BaseModule):
             是否包含工具调用
         """
         try:
-            # 检查是否包含JSON代码块
-            json_pattern = r'```json\s*(.*?)\s*```'
-            match = re.search(json_pattern, response_content, re.DOTALL)
+            # 1. 首先尝试解析 ```json ... ``` 格式
+            json_code_pattern = r'```json\s*(.*?)\s*```'
+            match = re.search(json_code_pattern, response_content, re.DOTALL)
             
             if match:
                 json_content = match.group(1).strip()
-                try:
-                    # 尝试解析JSON内容
-                    parsed_json = json.loads(json_content)
-                    
-                    # 检查是否是有效的工具调用格式
-                    if isinstance(parsed_json, dict) and 'name' in parsed_json:
-                        return True
-                    
-                except json.JSONDecodeError:
-                    return False
+                if self._is_valid_tool_call_json(json_content):
+                    return True
             
+            # 2. 尝试解析 ``` ... ``` 格式（不指定语言）
+            code_block_pattern = r'```\s*(.*?)\s*```'
+            match = re.search(code_block_pattern, response_content, re.DOTALL)
+            
+            if match:
+                code_content = match.group(1).strip()
+                if self._is_valid_tool_call_json(code_content):
+                    return True
+            
+            # 3. 尝试提取普通的 JSON 对象
+            # 改进的正则表达式，更好地处理嵌套JSON
+            json_object_pattern = r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}'
+            json_matches = re.finditer(json_object_pattern, response_content)
+            
+            for match in json_matches:
+                json_str = match.group(0)
+                if self._is_valid_tool_call_json(json_str):
+                    return True
+            
+            # 4. 尝试提取单行JSON（处理可能的换行符）
+            # 移除换行符和多余空格后尝试解析
+            cleaned_content = re.sub(r'\s+', ' ', response_content.strip())
+            if self._is_valid_tool_call_json(cleaned_content):
+                return True
+                
             return False
-            
+
         except Exception as e:
             self.logger.error(f"Failed to check tool call: {e}")
             return False
+    
+    def _is_valid_tool_call_json(self, json_str: str) -> bool:
+        """
+        验证JSON字符串是否为有效的工具调用格式
+        
+        Args:
+            json_str: JSON字符串
+            
+        Returns:
+            是否为有效的工具调用
+        """
+        try:
+            parsed_json = json.loads(json_str)
+            
+            # 检查是否为字典类型
+            if not isinstance(parsed_json, dict):
+                return False
+            
+            # 检查是否包含必要的字段
+            if 'name' not in parsed_json:
+                return False
+            
+            # 检查name字段是否为字符串且不为空
+            if not isinstance(parsed_json['name'], str) or not parsed_json['name'].strip():
+                return False
+            
+            # 检查arguments字段（如果存在）
+            if 'arguments' in parsed_json:
+                if not isinstance(parsed_json['arguments'], dict):
+                    return False
+            
+            return True
+            
+        except (json.JSONDecodeError, TypeError, KeyError):
+            return False
+
+if __name__ == "__main__":
+    # 注意拼写：AgentSimulator
+    from modules.agent_simulator.agent_simulator import AgentSimulator
+
+    # 创建模拟器实例（此处logger可为None或自定义）
+    simulator = AgentSimulator(logger=None)
+
+    # 测试字符串
+    test_str = '{"name": "tag_department_codes", "arguments": {"department_map": {"user_7xK2m": "Sales", "user_9pL4q": "Marketing", "user_2wN8r": "Product", "user_5hJ1k": "Sales", "user_3dF6v": "Marketing"}}}'
+    result = simulator._contains_tool_call(test_str)
+    test_str = '{"name": "generate_dept_invoice", "arguments": {"session_token": "sess_admin_aXyZ9", "date": "2024-05-31"}}'
+    # 调用_contains_tool_call方法
+    result = simulator._contains_tool_call(test_str)
+
+    print(f"Tool call detected: {result}")

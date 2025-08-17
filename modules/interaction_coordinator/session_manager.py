@@ -78,7 +78,6 @@ class SessionManager(BaseModule):
                 task_id=task.id,
                 agent_id=agent_config.id,
                 session_state={
-                    'task_context': task.context,
                     'persona_info': {
                         'personality_type': user_persona.personality_type.value,
                         'style_type': user_persona.style_type.value,
@@ -170,13 +169,7 @@ class SessionManager(BaseModule):
                     if isinstance(message, list):
                         # 如果是执行结果列表，格式化显示
                         for result in message:
-                            if isinstance(result, dict):
-                                tool_name = result.get('tool_name', 'unknown')
-                                status = result.get('status', 'unknown')
-                                result_msg = result.get('message', '')
-                                history_lines.append(f"execution ({tool_name}): {status} - {result_msg}")
-                            else:
-                                history_lines.append(f"execution: {result}")
+                            history_lines.append(f"execution: {json.dumps(result, ensure_ascii=False, indent=2)}")
                     else:
                         history_lines.append(f"execution: {message}")
             

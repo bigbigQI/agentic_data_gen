@@ -132,7 +132,6 @@ class Task:
     task_type: TaskType
     expected_tools: List[str] = field(default_factory=list)
     rubric: TaskRubric = field(default_factory=TaskRubric)
-    context: Dict[str, Any] = field(default_factory=dict)
     metadata: Dict[str, Any] = field(default_factory=dict)
     created_at: datetime = field(default_factory=datetime.now)
 

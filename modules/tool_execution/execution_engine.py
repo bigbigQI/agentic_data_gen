@@ -96,11 +96,7 @@ class ExecutionEngine(BaseModule):
                     errors.append(error_msg)
                     self.logger.error(error_msg)
             
-            return {
-                'results': results,
-                'errors': errors,
-                'execution_state': self.execution_state
-            }
+            return results
             
         except Exception as e:
             self.logger.error(f"Execution engine process failed: {e}")
@@ -234,8 +230,7 @@ class ExecutionEngine(BaseModule):
             response = self.llm_client.generate_completion(
                 prompt=prompt,
                 system_prompt=self.prompts.TOOL_EXECUTION_SYSTEM,
-            )
-            
+            )            
             # 解析LLM响应
             try:
                 result = self.llm_client.parse_json_response(response)

@@ -15,7 +15,7 @@ Domain: {domain}
 Each scenario should include:  
 1. Scenario name (concise and clear)  
 2. Detailed description (100-200 words)  
-3. Application context  
+3. Application   
 4. Typical user needs
 
 Requirements:  
@@ -31,7 +31,7 @@ Please output in JSON format with the following structure:
   {{
     "name": "Scenario Name",  
     "description": "Detailed description",  
-    "context": "Application context",  
+    "": "Application ",  
     "target_users": ["Target user groups"]  
   }}  
 ]

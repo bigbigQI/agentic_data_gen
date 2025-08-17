@@ -37,44 +37,6 @@ class ToolExecutionSimulator(BaseModule):
         self.execution_engine = ExecutionEngine(engine_config, self.logger)
         self.execution_engine.initialize()
     
-    def process(self, input_data: Any = None, **kwargs) -> Dict[str, Any]:
-        """
-        处理输入数据
-        
-        Args:
-            input_data: 输入数据，应该包含智能体消息
-            **kwargs: 其他参数
-            
-        Returns:
-            处理结果
-        """
-        try:
-            if isinstance(input_data, str):
-                # 如果输入是字符串，直接当作智能体消息处理
-                agent_message = input_data
-            elif isinstance(input_data, dict) and 'agent_message' in input_data:
-                # 如果输入是字典，提取智能体消息
-                agent_message = input_data['agent_message']
-            else:
-                return {'error': 'Invalid input data format'}
-            
-            # 执行工具调用
-            results = self.execute_agent_message(agent_message)
-            
-            return {
-                'success': True,
-                'tool_execution_results': results,
-                'message_count': len(results)
-            }
-            
-        except Exception as e:
-            self.logger.error(f"Tool execution simulator process failed: {e}")
-            return {
-                'success': False,
-                'error': str(e),
-                'tool_execution_results': []
-            }
-    
     def initialize_tools(self, tools_info: Dict[str, Any]):
         """
         初始化工具信息
@@ -110,10 +72,7 @@ class ToolExecutionSimulator(BaseModule):
             
             execution_results = self.execution_engine.process(execution_data)
             
-            # 格式化结果
-            formatted_results = self._format_results_for_agent(execution_results)
-            
-            return formatted_results
+            return execution_results
             
         except Exception as e:
             self.logger.error(f"Tool execution failed: {e}")
@@ -126,80 +85,133 @@ class ToolExecutionSimulator(BaseModule):
     
     def _extract_tool_calls(self, agent_message: str) -> List[Dict[str, Any]]:
         """
-        从智能体消息中提取工具调用
-        
+        Extract tool calls from agent message.
+
         Args:
-            agent_message: 智能体消息
-            
+            agent_message: The message from the agent.
+
         Returns:
-            工具调用列表，每个元素为字典格式 {'name': str, 'arguments': dict}
+            List of tool calls, each as a dict {'name': str, 'arguments': dict}
         """
+        import re
+        import json
+
+        def is_valid_tool_call_json(json_str: str) -> bool:
+            try:
+                parsed_json = json.loads(json_str)
+                if not isinstance(parsed_json, dict):
+                    return False
+                if 'name' not in parsed_json:
+                    return False
+                if not isinstance(parsed_json['name'], str) or not parsed_json['name'].strip():
+                    return False
+                if 'arguments' in parsed_json and not isinstance(parsed_json['arguments'], dict):
+                    return False
+                return True
+            except (json.JSONDecodeError, TypeError, KeyError):
+                return False
+
         try:
             tool_calls = []
-            
-            # 检查是否包含JSON代码块
-            json_pattern = r'```json\s*(.*?)\s*```'
-            matches = re.findall(json_pattern, agent_message, re.DOTALL)
-            
+            processed_json_strings = set()
+
+            # 1. Extract ```json ... ``` code blocks
+            json_code_pattern = r'```json\s*(.*?)\s*```'
+            matches = re.findall(json_code_pattern, agent_message, re.DOTALL)
             for match in matches:
                 json_content = match.strip()
-                try:
-                    # 尝试解析JSON内容
-                    parsed_json = json.loads(json_content)
-                    
-                    # 检查是否是有效的工具调用格式
-                    if isinstance(parsed_json, dict) and 'name' in parsed_json:
-                        tool_calls.append(parsed_json)
-                        
-                except json.JSONDecodeError:
+                if json_content in processed_json_strings:
                     continue
-            
+                processed_json_strings.add(json_content)
+                try:
+                    parsed_json = json.loads(json_content)
+                    if isinstance(parsed_json, dict) and is_valid_tool_call_json(json_content):
+                        tool_calls.append(parsed_json)
+                    elif isinstance(parsed_json, list):
+                        for item in parsed_json:
+                            if isinstance(item, dict) and 'name' in item and is_valid_tool_call_json(json.dumps(item)):
+                                tool_calls.append(item)
+                except Exception:
+                    continue
+
+            # 2. Extract ``` ... ``` code blocks (no language specified)
+            code_block_pattern = r'```\s*(.*?)\s*```'
+            matches_code = re.findall(code_block_pattern, agent_message, re.DOTALL)
+            for match in matches_code:
+                code_content = match.strip()
+                if code_content in processed_json_strings:
+                    continue
+                processed_json_strings.add(code_content)
+                try:
+                    parsed_json = json.loads(code_content)
+                    if isinstance(parsed_json, dict) and is_valid_tool_call_json(code_content):
+                        tool_calls.append(parsed_json)
+                    elif isinstance(parsed_json, list):
+                        for item in parsed_json:
+                            if isinstance(item, dict) and 'name' in item and is_valid_tool_call_json(json.dumps(item)):
+                                tool_calls.append(item)
+                except Exception:
+                    continue
+
+            # 3. Remove all processed code blocks from message
+            remaining_message = agent_message
+            for match in matches:
+                json_block = f"```json{match}```"
+                remaining_message = remaining_message.replace(json_block, " ")
+            for match in matches_code:
+                code_block = f"```{match}```"
+                remaining_message = remaining_message.replace(code_block, " ")
+
+            # 4. Extract JSON objects {...}
+            json_object_pattern = r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}'
+            json_matches = re.finditer(json_object_pattern, remaining_message)
+            for match in json_matches:
+                json_str = match.group(0)
+                if json_str in processed_json_strings:
+                    continue
+                processed_json_strings.add(json_str)
+                if is_valid_tool_call_json(json_str):
+                    try:
+                        parsed_json = json.loads(json_str)
+                        tool_calls.append(parsed_json)
+                    except Exception:
+                        continue
+
+            # 5. Extract JSON arrays [...]
+            json_array_pattern = r'\[[^\[\]]*(?:\[[^\[\]]*\][^\[\]]*)*\]'
+            array_matches = re.finditer(json_array_pattern, remaining_message)
+            for match in array_matches:
+                json_str = match.group(0)
+                if json_str in processed_json_strings:
+                    continue
+                processed_json_strings.add(json_str)
+                try:
+                    parsed_json = json.loads(json_str)
+                    if isinstance(parsed_json, list):
+                        for item in parsed_json:
+                            if isinstance(item, dict) and 'name' in item and is_valid_tool_call_json(json.dumps(item)):
+                                tool_calls.append(item)
+                except Exception:
+                    continue
+
+            # 6. Try to parse the whole message (after removing code blocks) as JSON (single line, fallback)
+            cleaned_content = re.sub(r'\s+', ' ', remaining_message.strip())
+            if cleaned_content not in processed_json_strings and is_valid_tool_call_json(cleaned_content):
+                try:
+                    parsed_json = json.loads(cleaned_content)
+                    if isinstance(parsed_json, dict):
+                        tool_calls.append(parsed_json)
+                    elif isinstance(parsed_json, list):
+                        for item in parsed_json:
+                            if isinstance(item, dict) and 'name' in item and is_valid_tool_call_json(json.dumps(item)):
+                                tool_calls.append(item)
+                except Exception:
+                    pass
+
             return tool_calls
-            
+
         except Exception as e:
             self.logger.error(f"Failed to extract tool calls from message: {e}")
-            return []
-    
-    def _format_results_for_agent(self, execution_results: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """
-        格式化执行结果给智能体
-        
-        Args:
-            execution_results: 原始执行结果
-            
-        Returns:
-            格式化后的结果列表
-        """
-        try:
-            formatted_results = []
-            results = execution_results.get('results', [])
-            
-            for result in results:
-                formatted_result = {
-                    'tool_name': result.get('metadata', {}).get('tool_name', 'unknown'),
-                    'status': result.get('status', 'unknown'),
-                    'result': result.get('result'),
-                    'message': result.get('message', ''),
-                    'execution_time': result.get('metadata', {}).get('execution_time', 0)
-                }
-                formatted_results.append(formatted_result)
-            
-            # 添加错误信息
-            errors = execution_results.get('errors', [])
-            for error in errors:
-                error_result = {
-                    'tool_name': 'error',
-                    'status': 'failure',
-                    'result': None,
-                    'message': error,
-                    'execution_time': 0
-                }
-                formatted_results.append(error_result)
-            
-            return formatted_results
-            
-        except Exception as e:
-            self.logger.error(f"Failed to format results: {e}")
             return []
     
     def reset_execution_state(self):

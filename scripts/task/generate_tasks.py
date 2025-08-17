@@ -8,6 +8,7 @@
 import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../'))
+import random
 
 import json
 import logging
@@ -17,7 +18,7 @@ from typing import Dict, Any, List
 from config.settings import settings
 from utils.logger import setup_logger
 from utils.file_manager import FileManager
-from modules.task_generator import TaskGeneratorModule
+from modules.task_generator import TaskGenerator
 
 
 def setup_task_logger():
@@ -48,17 +49,16 @@ def find_latest_agents_file() -> str:
 
 def find_latest_tools_file() -> str:
     """查找最新的工具文件"""
-    data_path = Path('data/generated/tools')
-    if not data_path.exists():
-        raise FileNotFoundError("Tools data directory not found")
+    tools_dir = settings.get_data_path('tools')
+    file_manager = FileManager(tools_dir)
     
+    # 优先查找最终过滤后的工具文件
+    final_files = file_manager.list_files(".", "*final_tools*.json")
+    if final_files:
+        latest_file = max(final_files, key=lambda f: file_manager.get_file_info(f)['modified'])
+        return os.path.join(tools_dir, latest_file)
     
-    files = list(data_path.glob('final_tools_*.json'))
-    if files:
-        latest_file = max(files, key=lambda f: f.stat().st_mtime)
-        return str(latest_file)
-    
-    raise FileNotFoundError("No tools files found")
+    return None
 
 
 def load_agents_data(file_path: str) -> List[Dict[str, Any]]:
@@ -144,15 +144,15 @@ def main():
             print("❌ 没有找到有效的智能体，无法生成任务")
             return
         
+        random.shuffle(valid_agents)
         # 5. 配置任务生成
-        task_config = {
-            'tasks_per_difficulty': 2,  # 每个难度级别生成2个任务
-            'max_workers': 3  # 并发数
-        }
+
+        valid_agents = valid_agents[:2000]
+        task_config = settings.GENERATION_CONFIG.get('tasks', {})
         
         # 6. 初始化任务生成模块
         print("🚀 初始化任务生成模块...")
-        task_generator = TaskGeneratorModule(config=task_config, logger=logger)
+        task_generator = TaskGenerator(config=task_config, logger=logger)
         task_generator.initialize()
         
         # 7. 生成任务
@@ -169,14 +169,16 @@ def main():
         print(f"\\n✅ 任务生成完成！")
         print(f"处理智能体数量: {total_agents}")
         print(f"生成任务总数: {total_tasks}")
-        print(f"平均每个智能体任务数: {result['generation_summary']['tasks_per_agent']:.1f}")
         
-        # 显示难度分布
+        # 显示难度分布和成功率
         difficulty_dist = result['generation_summary']['difficulty_distribution']
+        success_rate = result['generation_summary']['success_rate']
+        
         print(f"\\n📊 任务难度分布:")
         for difficulty, count in difficulty_dist.items():
             print(f"  {difficulty}: {count} 个任务")
         
+        print(f"\\n📈 生成成功率: {success_rate:.2%}")
         print(f"\\n💾 任务数据已保存到 data/generated/tasks/ 目录")
         
     except FileNotFoundError as e:

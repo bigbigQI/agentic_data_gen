@@ -7,7 +7,6 @@ import json
 import random
 from typing import Dict, Any, List, Optional
 import logging
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 
 from core.base_module import BaseModule
@@ -35,10 +34,6 @@ class TaskDesigner(BaseModule):
         self.data_processor = None
         self.file_manager = None
         
-        # 默认配置
-        self.tasks_per_difficulty = 2  # 每个难度级别生成的任务数
-        self.max_workers = 3  # 并发数
-        
     def _setup(self):
         """设置组件"""
         from config.settings import settings
@@ -53,87 +48,8 @@ class TaskDesigner(BaseModule):
         # 初始化文件管理器
         data_path = settings.get_data_path('tasks')
         self.file_manager = FileManager(data_path, self.logger)
-        
-        # 更新配置
-        config = self.config or {}
-        self.tasks_per_difficulty = config.get('tasks_per_difficulty', 2)
-        self.max_workers = config.get('max_workers', 3)
     
-    def process(self, agent_id: str, agent_tools: List[str], 
-                               tools_data: Dict[str, Any], **kwargs) -> List[Task]:
-        """
-        为指定智能体生成任务
-        
-        Args:
-            agent_id: 智能体ID
-            agent_tools: 智能体可用的工具列表
-            tools_data: 工具详细信息
-            **kwargs: 其他参数
-            
-        Returns:
-            生成的任务列表
-        """
-        try:
-            # 获取工具详细信息
-            available_tools_info = self._get_tools_info(agent_tools, tools_data)
-            
-            if not available_tools_info:
-                self.logger.warning(f"No valid tools found for agent {agent_id}")
-                return []
-            
-            # 并发生成不同难度的任务
-            all_tasks = []
-            
-            with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-                future_to_difficulty = {}
-                
-                for difficulty in DifficultyLevel:
-                    future = executor.submit(
-                        self._generate_tasks_for_difficulty,
-                        agent_id,
-                        available_tools_info,
-                        difficulty,
-                        self.tasks_per_difficulty
-                    )
-                    future_to_difficulty[future] = difficulty
-                
-                # 收集结果
-                for future in as_completed(future_to_difficulty):
-                    difficulty = future_to_difficulty[future]
-                    try:
-                        tasks = future.result()
-                        all_tasks.extend(tasks)
-                        self.logger.debug(f"Generated {len(tasks)} {difficulty.value} tasks for agent {agent_id}")
-                    except Exception as e:
-                        self.logger.error(f"Failed to generate {difficulty.value} tasks for agent {agent_id}: {e}")
-            
-            # 保存任务
-            if all_tasks:
-                self._save_agent_tasks(agent_id, all_tasks)
-            
-            return all_tasks
-            
-        except Exception as e:
-            self.logger.error(f"Failed to generate tasks for agent {agent_id}: {e}")
-            return []
-    
-    def _generate_tasks_for_difficulty(self, agent_id: str, tools_info: List[Dict[str, Any]], 
-                                     difficulty: DifficultyLevel, count: int) -> List[Task]:
-        """为指定难度生成任务"""
-        tasks = []
-        
-        for i in range(count):
-            try:
-                task = self._generate_single_task(agent_id, tools_info, difficulty)
-                if task:
-                    tasks.append(task)
-            except Exception as e:
-                self.logger.error(f"Failed to generate task {i+1} for difficulty {difficulty.value}: {e}")
-                continue
-        
-        return tasks
-    
-    def _generate_single_task(self, agent_id: str, tools_info: List[Dict[str, Any]], 
+    def generate_single_task(self, agent_id: str, tools_info: List[Dict[str, Any]], 
                             difficulty: DifficultyLevel) -> Optional[Task]:
         """生成单个任务"""
         try:
@@ -302,7 +218,6 @@ class TaskDesigner(BaseModule):
             task_type=TaskType.MULTI_TURN,
             expected_tools=expected_tools,
             rubric=rubric,
-            context=task_info.get('user_context', {}),
             metadata={
                 'expected_turns': task_info.get('expected_turns', '4-8'),
                 'generated_at': datetime.now().isoformat()
@@ -311,42 +226,7 @@ class TaskDesigner(BaseModule):
         
         return task
     
-    def _save_agent_tasks(self, agent_id: str, tasks: List[Task]):
-        """保存智能体的任务"""
-        try:
-            # 转换为可序列化的格式
-            tasks_data = []
-            for task in tasks:
-                task_dict = {
-                    'id': task.id,
-                    'agent_id': task.agent_id,
-                    'title': task.title,
-                    'description': task.description,
-                    'difficulty': task.difficulty.value,
-                    'task_type': task.task_type.value,
-                    'expected_tools': task.expected_tools,
-                    'rubric': {
-                        'success_criteria': task.rubric.success_criteria,
-                        'tool_usage_expectations': task.rubric.tool_usage_expectations,
-                        'checkpoints': task.rubric.checkpoints
-                    },
-                    'context': task.context,
-                    'metadata': task.metadata,
-                    'created_at': task.created_at.isoformat()
-                }
-                tasks_data.append(task_dict)
-            
-            # 保存文件
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"tasks_{agent_id}_{timestamp}.json"
-            
-            self.file_manager.save_json(tasks_data, filename)
-            self.logger.info(f"Saved {len(tasks)} tasks for agent {agent_id} to {filename}")
-            
-        except Exception as e:
-            self.logger.error(f"Failed to save tasks for agent {agent_id}: {e}")
-            raise AgentDataGenException(f"Failed to save agent tasks: {e}")
-    
+
     def save_batch_tasks(self, tasks: List[Task]):
         """批量保存任务"""
         try:
@@ -366,7 +246,6 @@ class TaskDesigner(BaseModule):
                         'tool_usage_expectations': task.rubric.tool_usage_expectations,
                         'checkpoints': task.rubric.checkpoints
                     },
-                    'context': task.context,
                     'metadata': task.metadata,
                     'created_at': task.created_at.isoformat()
                 }

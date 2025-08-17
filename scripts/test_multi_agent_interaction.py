@@ -37,7 +37,7 @@ def setup_test_environment():
 
 def load_test_task():
     """从生成的数据文件中加载测试任务"""
-    task_file = "/Users/larkz/Documents/apps/agent_data_gen/data/generated/tasks/tasks_agent_04c30284_20250811_163638.json"
+    task_file = "/Users/larkz/Documents/apps/agent_data_gen/data/generated/tasks/tasks_agent_e7188c2c_20250816_183506.json"
     
     with open(task_file, 'r', encoding='utf-8') as f:
         tasks_data = json.load(f)
@@ -76,7 +76,6 @@ def load_test_task():
         task_type=task_type_map.get(task_data['task_type'], TaskType.MULTI_TURN),
         expected_tools=task_data['expected_tools'],
         rubric=rubric,
-        context=task_data['context']
     )
     
     return task, task_file
@@ -191,11 +190,6 @@ def test_unified_session_interaction(logger):
                 message_str = str(message)[:100]
             logger.info(f"第{i+1}轮 - {speaker}: {message_str}...")
         
-        # 获取协调器统计
-        stats = coordinator.get_coordinator_stats()
-        logger.info(f"协调器统计: {json.dumps(stats, ensure_ascii=False, indent=2)}")
-        
-        logger.info("✅ 统一会话管理的多智能体交互测试成功")
         return True
         
     except Exception as e:
