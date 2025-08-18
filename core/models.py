@@ -174,11 +174,6 @@ class InteractionSession:
 class TrajectoryScore:
     """轨迹评分"""
     overall_score: float
-    task_completion_score: float
-    tool_usage_score: float
-    interaction_quality_score: float
-    detailed_scores: Dict[str, float] = field(default_factory=dict)
-    feedback: str = ""
     pass_threshold: float = 4.0
     
     @property

@@ -44,6 +44,7 @@ class Settings:
             "tasks": self.DATA_DIR / "generated" / "tasks",
             "user_personas": self.DATA_DIR / "generated" / "user_personas",
             "trajectories": self.DATA_DIR / "generated" / "trajectories",
+            "trajectory_evaluations": self.DATA_DIR / "generated" / "trajectory_evaluations",
             "high_quality_trajectories": self.DATA_DIR / "filtered" / "high_quality_trajectories",
             "training_data": self.DATA_DIR / "filtered" / "training_data",
             "temp": self.DATA_DIR / "temp",
@@ -112,28 +113,6 @@ class Settings:
             "score_thresholds": {
                 "pass_threshold": float(os.getenv("QUALITY_PASS_THRESHOLD", "4.0")),
                 "high_quality_threshold": float(os.getenv("QUALITY_HIGH_THRESHOLD", "4.5"))
-            },
-            "scoring_weights": {
-                "task_completion": 0.4,
-                "tool_usage": 0.3,
-                "interaction_quality": 0.3
-            },
-            "evaluation_criteria": {
-                "task_completion": [
-                    "任务目标是否明确达成",
-                    "解决方案是否合理有效",
-                    "是否处理了所有必要步骤"
-                ],
-                "tool_usage": [
-                    "工具调用是否正确",
-                    "工具选择是否合适",
-                    "参数传递是否准确"
-                ],
-                "interaction_quality": [
-                    "对话是否自然流畅",
-                    "响应是否及时恰当",
-                    "错误处理是否得当"
-                ]
             }
         }
         

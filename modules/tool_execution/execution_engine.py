@@ -330,10 +330,7 @@ class ExecutionEngine(BaseModule):
             }
             
             self.execution_state['execution_history'].append(execution_record)
-            
-            # 根据工具类型更新特定状态
-            # self._update_tool_specific_state(tool_name, parameters, result)
-            
+
         except Exception as e:
             self.logger.error(f"Failed to update execution state: {e}")    
 
