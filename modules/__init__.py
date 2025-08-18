@@ -3,8 +3,8 @@
 包含所有核心业务模块
 """
 
-from .domain_tool_generator import DomainToolGeneratorModule
+# from .domain_tool_generator import DomainToolGeneratorModule
 
-__all__ = [
-    'DomainToolGeneratorModule'
-] 
+# __all__ = [
+#     'DomainToolGeneratorModule'
+# ] 

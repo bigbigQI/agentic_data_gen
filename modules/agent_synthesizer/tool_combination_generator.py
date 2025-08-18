@@ -86,9 +86,10 @@ class ToolCombinationGenerator(BaseModule):
             # 2. 为每个场景构建工具图
             scenario_graphs = self._build_scenario_graphs(scenario_groups)
             
+            target_count_per_scenario = target_count // len(scenario_graphs)
             # 3. 生成工具组合
             combinations = self._generate_combinations_from_scenarios(
-                scenario_graphs, target_count
+                scenario_graphs, target_count_per_scenario
             )
             
             # 4. 去重和验证

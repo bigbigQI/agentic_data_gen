@@ -7,79 +7,45 @@ class ExecutionPrompts:
     """工具执行模拟器提示词模板"""
     
     # 工具执行模拟系统提示词
-    TOOL_EXECUTION_SYSTEM = """你是一个AI系统中的工具执行模拟器，负责模拟各种工具的执行结果。你需要根据工具的功能描述和输入参数，生成合理、真实的执行结果。
+    TOOL_EXECUTION_SYSTEM = """
+You are a **Tool Execution Simulator** within an AI system. Your role is to simulate the execution results of various tools. Based on the tool’s functional description and input parameters, you must generate reasonable and realistic execution outcomes.  
 
-## 核心原则
-1. **真实性**: 模拟结果应该符合真实工具的行为表现
-2. **一致性**: 相同输入应该产生一致的输出（除非工具本身具有随机性）
-3. **错误处理**: 适当模拟可能出现的错误和异常情况
-4. **状态维护**: 保持工具执行的状态连续性
+## Core Principles
+1. **Authenticity**: The simulated results should accurately reflect how the real tool would behave.  
+2. **Consistency**: The same input must always produce the same output (unless the tool’s behavior is inherently random).  
+3. **Error Handling**: Appropriately simulate possible errors, warnings, or exceptions.  
+4. **State Management**: Maintain continuity of the tool’s execution state across interactions.  
 
-## 执行结果类型
-- **成功**: 工具正常执行并返回预期结果
-- **部分成功**: 工具执行成功但有警告或部分信息缺失
-- **失败**: 由于参数错误、权限不足或其他原因导致执行失败
+## Execution Result Types
+- **Success**: The tool executes normally and returns the expected result.  
+- **Partial Success**: The tool executes successfully but with warnings or incomplete information.  
+- **Failure**: The execution fails due to issues such as invalid parameters, insufficient permissions, or other errors.  
 
-## 输出格式
-请严格按照工具调用的JSON格式输出
+## Output Format
+Always return results strictly in the JSON format defined by the tool’s expected schema.  
 ```
 """
 
     # 工具执行结果模板
     EXECUTION_RESULT_TEMPLATE = """
-## 工具调用
-{tool_call}
+Simulate the execution of the specified tool.  
 
-## 工具示例
-{examples}
+### Inputs  
+- **Tool Call:** {tool_call}  
+- **Tool Examples:** {examples}  
+- **Current State:** {current_state} 
+- **Execution Type:** {execution_type}
 
-## 当前状态
-{current_state}
+### Requirements  
+- Verify that parameters are valid and complete.  
+- Reflect the tool’s expected behavior and constraints.  
+- Appropriately simulate possible errors or exceptions.  
+- Update and maintain the system state based on execution.  
+- Follow the structure and formatting shown in the provided examples.  
+- Please use the execution type to determine the execution result.
+- Please refer to the Current State and ensure the generated result is consistent with the current state.
 
-## 执行请求
-请模拟执行该工具并返回合理的结果。考虑以下因素：
-1. 参数是否有效和完整
-2. 工具的预期行为和限制
-3. 可能的错误情况
-4. 执行后对系统状态的影响
-5. 参考提供的工具示例来生成符合格式的结果
-
-请生成符合实际情况的执行结果。
+### Output  
+Return a realistic execution result strictly in JSON format, consistent with the tool’s schema.  
 """
 
-    # 状态更新提示词
-    STATE_UPDATE_PROMPT = """基于以下工具执行结果，请更新系统状态：
-
-## 执行结果
-{execution_result}
-
-## 当前状态
-{current_state}
-
-## 更新要求
-1. 根据工具执行结果更新相关状态
-2. 保持状态的一致性和完整性
-3. 记录重要的变更历史
-4. 处理可能的状态冲突
-
-请返回更新后的系统状态，格式为JSON。"""
-
-    # 错误处理提示词
-    ERROR_HANDLING_PROMPT = """工具执行出现异常，请生成合理的错误响应：
-
-## 错误信息
-{error_info}
-
-## 工具信息
-{tool_info}
-
-## 错误类型判断
-请根据错误信息判断错误类型：
-- parameter_error: 参数错误
-- permission_error: 权限错误
-- resource_error: 资源不足或不可用
-- network_error: 网络连接问题
-- system_error: 系统内部错误
-- timeout_error: 执行超时
-
-请生成符合该错误类型的响应信息。"""

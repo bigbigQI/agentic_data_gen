@@ -53,7 +53,7 @@ class Settings:
         # 生成配置（支持环境变量覆盖）
         self.GENERATION_CONFIG = {
             "scenarios": {
-                "target_count": int(os.getenv("SCENARIO_TARGET_COUNT", "20")),
+                "target_count": int(os.getenv("SCENARIO_TARGET_COUNT", "50")),
                 # "domains": [
                 #     "外卖配送", "社交媒体", "金融交易", "软件应用", "机器人控制",
                 #     "电商购物", "在线教育", "医疗健康", "旅游出行", "智能家居",ß
@@ -61,7 +61,10 @@ class Settings:
                 # ],
                 "domains": [
                     "food_delivery",
-                    # "robot_control"
+                    "robot_control",
+                    "social_media",
+                    "ecommerce",
+                    "travel",
                     ],
                 "batch_size": int(os.getenv("SCENARIO_BATCH_SIZE", "10"))
             },
@@ -72,11 +75,11 @@ class Settings:
             #     "batch_size": int(os.getenv("TOOL_BATCH_SIZE", "20"))
             # },
             "tools": {
-                "tools_per_scenario": int(os.getenv("TOOLS_PER_SCENARIO", "40")),
-                "batch_size": int(os.getenv("TOOL_BATCH_SIZE", "10"))
+                "tools_per_scenario": int(os.getenv("TOOLS_PER_SCENARIO", "10")),
+                "batch_size": int(os.getenv("TOOL_BATCH_SIZE", "5"))
             },
             "agents": {
-                "target_count": int(os.getenv("AGENT_TARGET_COUNT", "2000")),
+                "target_count": int(os.getenv("AGENT_TARGET_COUNT", "1000")),
                 "tools_per_agent": {
                     "min": int(os.getenv("AGENT_MIN_TOOLS", "3")), 
                     "max": int(os.getenv("AGENT_MAX_TOOLS", "6"))
@@ -90,12 +93,17 @@ class Settings:
             "user_personas": {
                 "target_count": int(os.getenv("USER_PERSONA_TARGET_COUNT", "500")),
                 "personality_types": [
-                    "friendly", "impatient", "cautious", "curious", "technical", "casual"
+                    "friendly", "impatient", "cautious", "casual"
                 ],
                 "interaction_styles": [
-                    "formal", "informal", "technical_oriented", "life_oriented"
+                    "formal", "informal", "life_oriented"
                 ],
                 "batch_size": int(os.getenv("USER_PERSONA_BATCH_SIZE", "25"))
+            },
+            "trajectories": {
+                "max_count": int(os.getenv("TRAJECTORY_MAX_COUNT", "1000")),
+                "max_workers": int(os.getenv("TRAJECTORY_MAX_WORKERS", "64")),
+                "max_turns": int(os.getenv("TRAJECTORY_MAX_TURNS", "20"))
             }
         }
         

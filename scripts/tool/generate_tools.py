@@ -18,7 +18,7 @@ from config.settings import settings
 from utils.logger import setup_logger
 from utils.file_manager import FileManager
 from modules.domain_tool_generator.tool_designer import ToolDesigner
-from modules.domain_tool_generator.tool_registry import ToolRegistry
+# from modules.domain_tool_generator.tool_registry import ToolRegistry
 
 
 def setup_tool_logger():
@@ -117,23 +117,23 @@ def generate_tools_for_scenarios(scenarios: List[Dict[str, Any]], logger):
         raise
 
 
-def register_generated_tools(tools: List[Dict[str, Any]], logger):
-    """注册生成的工具"""
-    logger.info("开始注册工具...")
+# def register_generated_tools(tools: List[Dict[str, Any]], logger):
+#     """注册生成的工具"""
+#     logger.info("开始注册工具...")
     
-    try:
-        input_data = {'tools': tools}
-        registry_config = {}
+#     try:
+#         input_data = {'tools': tools}
+#         registry_config = {}
         
-        with ToolRegistry(registry_config, logger) as registry:
-            registration_result = registry.process(input_data)
-            registry_stats = registry.get_registry_stats() if hasattr(registry, 'get_registry_stats') else {}
+#         with ToolRegistry(registry_config, logger) as registry:
+#             registration_result = registry.process(input_data)
+#             registry_stats = registry.get_registry_stats() if hasattr(registry, 'get_registry_stats') else {}
         
-        return registration_result, registry_stats
+#         return registration_result, registry_stats
         
-    except Exception as e:
-        logger.error(f"工具注册失败: {e}")
-        raise
+#     except Exception as e:
+#         logger.error(f"工具注册失败: {e}")
+#         raise
 
 
 def analyze_generation_results(scenarios: List[Dict[str, Any]], tools: List[Dict[str, Any]], 
@@ -240,17 +240,6 @@ def main():
         scenarios = load_existing_scenarios(logger)
         # 生成工具
         tools, designer_stats = generate_tools_for_scenarios(scenarios, logger)
-        
-        # # 注册工具
-        # registration_result, registry_stats = register_generated_tools(tools, logger)
-        
-        # # 分析结果
-        # analysis = analyze_generation_results(
-        #     scenarios, tools, designer_stats, registration_result, logger
-        # )
-        
-        # # 保存结果
-        # save_info = save_consolidated_results(tools, analysis, logger)
         
         # 最终总结
         logger.info("=" * 60)

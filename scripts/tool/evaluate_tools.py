@@ -113,7 +113,7 @@ def main():
     
     try:
         # 1. 加载指定的工具文件
-        tools_file = "data/generated/tools/tools_batch_20250810_114153.json"
+        tools_file = "data/generated/tools/tools_batch_20250818_003455.json"
         tools_data = load_tools_from_file(tools_file)
         if not tools_data:
             print("❌ 无法加载工具数据，程序退出")

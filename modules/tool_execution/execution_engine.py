@@ -141,7 +141,7 @@ class ExecutionEngine(BaseModule):
             result = self._simulate_execution(tool_call, tool_info, execution_type)
             
             # 更新执行状态
-            # self._update_execution_state(tool_name, parameters, result)
+            self._update_execution_state(tool_name, parameters, result)
             
             return result
             
@@ -223,6 +223,7 @@ class ExecutionEngine(BaseModule):
             prompt = self.prompts.EXECUTION_RESULT_TEMPLATE.format(
                 tool_call=tool_call_text,
                 examples=examples_text,
+                execution_type=execution_type,
                 current_state=json.dumps(self.execution_state, ensure_ascii=False, indent=2)
             )
             
@@ -330,78 +331,12 @@ class ExecutionEngine(BaseModule):
             
             self.execution_state['execution_history'].append(execution_record)
             
-            # 限制历史记录数量
-            if len(self.execution_state['execution_history']) > 50:
-                self.execution_state['execution_history'] = self.execution_state['execution_history'][-50:]
-            
             # 根据工具类型更新特定状态
-            self._update_tool_specific_state(tool_name, parameters, result)
+            # self._update_tool_specific_state(tool_name, parameters, result)
             
         except Exception as e:
-            self.logger.error(f"Failed to update execution state: {e}")
-    
-    def _update_tool_specific_state(self, tool_name: str, parameters: Dict[str, Any], result: Dict[str, Any]):
-        """根据工具类型更新特定状态"""
-        try:
-            if result.get('status') != 'success':
-                return  # 只在成功时更新状态
-            
-            # 根据工具名称的模式更新状态
-            if 'create' in tool_name.lower():
-                # 创建类工具
-                if 'created_items' not in self.execution_state:
-                    self.execution_state['created_items'] = []
-                
-                item_info = {
-                    'type': tool_name,
-                    'parameters': parameters,
-                    'created_at': datetime.now().isoformat()
-                }
-                self.execution_state['created_items'].append(item_info)
-                
-            elif 'delete' in tool_name.lower() or 'remove' in tool_name.lower():
-                # 删除类工具
-                if 'deleted_items' not in self.execution_state:
-                    self.execution_state['deleted_items'] = []
-                
-                item_info = {
-                    'type': tool_name,
-                    'parameters': parameters,
-                    'deleted_at': datetime.now().isoformat()
-                }
-                self.execution_state['deleted_items'].append(item_info)
-                
-            elif 'update' in tool_name.lower() or 'modify' in tool_name.lower():
-                # 更新类工具
-                if 'updated_items' not in self.execution_state:
-                    self.execution_state['updated_items'] = []
-                
-                item_info = {
-                    'type': tool_name,
-                    'parameters': parameters,
-                    'updated_at': datetime.now().isoformat()
-                }
-                self.execution_state['updated_items'].append(item_info)
-            
-            # 更新通用计数器
-            if 'tool_usage_count' not in self.execution_state:
-                self.execution_state['tool_usage_count'] = {}
-                
-            self.execution_state['tool_usage_count'][tool_name] = \
-                self.execution_state['tool_usage_count'].get(tool_name, 0) + 1
-                
-        except Exception as e:
-            self.logger.error(f"Failed to update tool-specific state: {e}")
-    
-    def get_execution_state(self) -> Dict[str, Any]:
-        """获取当前执行状态"""
-        return self.execution_state.copy()
-    
-    def reset_execution_state(self):
-        """重置执行状态"""
-        self.execution_state = {}
-        self.logger.info("Execution state reset")
-    
+            self.logger.error(f"Failed to update execution state: {e}")    
+
     def register_tools(self, tools_info: Dict[str, Any]):
         """注册工具信息"""
         self.tools_registry.update(tools_info)

@@ -31,7 +31,7 @@ Please output in JSON format with the following structure:
   {{
     "name": "Scenario Name",  
     "description": "Detailed description",  
-    "": "Application ",  
+    "context": "Application context",
     "target_users": ["Target user groups"]  
   }}  
 ]

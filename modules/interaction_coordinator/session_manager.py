@@ -240,7 +240,7 @@ class SessionManager(BaseModule):
             
             # 保存文件
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"trajectory_{trajectory.id}_{timestamp}.json"
+            filename = f"{trajectory.id}_{timestamp}.json"
             
             self.file_manager.save_json(training_data, filename)
             self.logger.info(f"Saved trajectory to {filename}")

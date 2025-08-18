@@ -28,7 +28,6 @@ class UserPersonalityType(Enum):
     FRIENDLY = "friendly"
     IMPATIENT = "impatient"
     CAUTIOUS = "cautious"
-    CURIOUS = "curious"
     CASUAL = "casual"
 
 

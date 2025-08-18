@@ -86,7 +86,6 @@ class AgentSimulator(BaseModule):
             )
             
             response_content = response.content.strip()
-            print("response_content", response_content)
             # 构建当前消息
             current_message = {"sender": "agent"}
             

@@ -26,7 +26,6 @@ class UserPrompts:
         'friendly': 'Friendly, enthusiastic, helpful, and displays a positive attitude in communication',
         'impatient': 'Impatient, wants to solve problems quickly, dislikes lengthy explanations',
         'cautious': 'Cautious and careful, double-checks before making decisions, worries about making mistakes',
-        'curious': 'Curious, likes to ask questions and explore, interested in new things',
         'casual': 'Casual and relaxed, uses informal language, does not care much about formality'
     }
 

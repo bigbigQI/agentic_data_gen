@@ -64,7 +64,7 @@ class InteractionCoordinator(BaseModule):
         # 更新配置
         config = self.config or {}
         self.max_turns = config.get('max_turns', 20)
-    
+            
     def execute_single_interaction(self, task: Task, agent_config: AgentConfig, tools_info: Dict[str, Any]) -> Trajectory:
         """
         执行单个交互会话
@@ -82,7 +82,6 @@ class InteractionCoordinator(BaseModule):
             
             # 生成用户人格
             user_persona = self.user_simulator.persona_generator.process()
-            print("user_persona", user_persona)
             # 创建统一会话
             session = self.session_manager.create_session(task, agent_config, user_persona)
             
@@ -93,7 +92,6 @@ class InteractionCoordinator(BaseModule):
             
             # 生成初始用户消息
             init_message = self.user_simulator.generate_initial_message()
-            print("init_message", init_message)
             # 添加初始消息到会话
             self.session_manager.add_message("user", "agent", init_message)
             
@@ -104,9 +102,6 @@ class InteractionCoordinator(BaseModule):
             trajectory = self.session_manager.finalize_session()
             
             # 保存会话
-            self.session_manager.save_session(trajectory)
-            
-            # 保存对话历史文件
             self.session_manager.save_session(trajectory)
             
             self.logger.info(f"Interaction completed: {trajectory.id}")
@@ -128,7 +123,6 @@ class InteractionCoordinator(BaseModule):
                 
                 # 获取最后一条消息的接收者，决定下一个发言者
                 last_recipient = self.session_manager.get_last_recipient()
-                print("last_recipient", last_recipient)
                 if last_recipient == "user":
                     # 轮到用户发言，调用用户模拟器
                     last_message = self.session_manager.get_last_message()
@@ -137,9 +131,7 @@ class InteractionCoordinator(BaseModule):
                     user_response = self.user_simulator.respond_to_agent(
                         last_message.get("message", ""),
                         conversation_history
-                    )
-                    print("user_response", user_response)
-                    
+                    )                    
                     # 检查是否结束对话
                     if "finish conversation" in user_response.lower():
                         self.session_manager.add_message("user", "agent", user_response)
@@ -151,7 +143,6 @@ class InteractionCoordinator(BaseModule):
                 elif last_recipient == "agent":
                     # 轮到智能体发言，调用智能体模拟器
                     history_messages = self.session_manager.get_conversation_history()
-                    # print("history_messages", history_messages)
                     current_message = self.agent_simulator.respond(history_messages)
                     
                     self.session_manager.add_message(
@@ -159,7 +150,6 @@ class InteractionCoordinator(BaseModule):
                         current_message["recipient"],
                         current_message["message"]
                     )
-                    print('agent message', current_message)
                     
                 elif last_recipient == "execution":
                     # 轮到工具执行，调用工具执行模拟器

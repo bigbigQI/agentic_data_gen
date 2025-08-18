@@ -61,13 +61,13 @@ You are the AI system with the role name **system**. Based on the current conver
    - Include only parameters explicitly provided by the user. Optional parameters should not be filled unless specified.  
    - API request format must strictly follow the function call format:  
      ```json
-     {
+     {{
        "name": "function_name",
-       "arguments": {
+       "arguments": {{
          "key1": "value1",
          "key2": "value2"
-       }
-     }
+       }}
+     }}
      ```
 
 2. **Requesting Information from the User**  
