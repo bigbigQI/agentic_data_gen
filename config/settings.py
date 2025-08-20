@@ -104,7 +104,7 @@ class Settings:
             "trajectories": {
                 "max_count": int(os.getenv("TRAJECTORY_MAX_COUNT", "1000")),
                 "max_workers": int(os.getenv("TRAJECTORY_MAX_WORKERS", "64")),
-                "max_turns": int(os.getenv("TRAJECTORY_MAX_TURNS", "20"))
+                "max_turns": int(os.getenv("TRAJECTORY_MAX_TURNS", "40"))
             }
         }
         

@@ -300,7 +300,6 @@ def main():
         if not filtered_trajectories:
             print("❌ 没有轨迹通过预过滤")
             return 1
-        filtered_trajectories = filtered_trajectories[:10]
         print(f"✅ {len(filtered_trajectories)} 个轨迹通过预过滤")
 
         # 5. 执行评分
@@ -335,8 +334,6 @@ def main():
                         
                         if result['status'] == 'success':
                             successful_count += 1
-                            if successful_count % 5 == 0:  # 每5个成功评分输出进度
-                                print(f"✅ 已完成评分 {successful_count} 个轨迹...")
                         else:
                             failed_count += 1
                         

@@ -198,6 +198,80 @@ def convert_agent_dict_to_object(agent_data: Dict[str, Any]) -> AgentConfig:
     )
 
 
+def load_existing_trajectory_task_ids(trajectory_dir: Path, logger: logging.Logger) -> set:
+    """
+    加载现有轨迹中的任务ID
+    
+    Args:
+        trajectory_dir: 轨迹目录路径
+        logger: 日志器
+        
+    Returns:
+        已存在的任务ID集合
+    """
+    existing_task_ids = set()
+    
+    if not trajectory_dir.exists():
+        logger.info(f"轨迹目录不存在: {trajectory_dir}")
+        return existing_task_ids
+    
+    # 查找所有JSON文件
+    json_files = list(trajectory_dir.glob("*.json"))
+    logger.info(f"在 {trajectory_dir} 中找到 {len(json_files)} 个轨迹文件")
+    
+    for json_file in json_files:
+        try:
+            with open(json_file, 'r', encoding='utf-8') as f:
+                trajectory_data = json.load(f)
+            
+            # 提取task_id
+            task_id = trajectory_data.get('task_id')
+            if task_id:
+                existing_task_ids.add(task_id)
+                logger.debug(f"发现已存在的任务ID: {task_id} (来自文件: {json_file.name})")
+            
+        except Exception as e:
+            logger.warning(f"读取轨迹文件失败 {json_file.name}: {e}")
+            continue
+    
+    logger.info(f"总共发现 {len(existing_task_ids)} 个已存在的任务ID")
+    return existing_task_ids
+
+
+def filter_existing_tasks(
+    matched_pairs: List[Tuple[Task, AgentConfig, Dict[str, Any]]], 
+    existing_task_ids: set,
+    logger: logging.Logger
+) -> List[Tuple[Task, AgentConfig, Dict[str, Any]]]:
+    """
+    过滤掉已经存在的任务
+    
+    Args:
+        matched_pairs: 匹配的任务-智能体对列表
+        existing_task_ids: 已存在的任务ID集合
+        logger: 日志器
+        
+    Returns:
+        过滤后的匹配对列表
+    """
+    if not existing_task_ids:
+        logger.info("没有发现已存在的任务，不进行过滤")
+        return matched_pairs
+    
+    filtered_pairs = []
+    filtered_count = 0
+    
+    for task, agent, tools in matched_pairs:
+        if task.id in existing_task_ids:
+            logger.debug(f"过滤已存在的任务: {task.id}")
+            filtered_count += 1
+        else:
+            filtered_pairs.append((task, agent, tools))
+    
+    logger.info(f"过滤掉 {filtered_count} 个已存在的任务，剩余 {len(filtered_pairs)} 个任务待生成")
+    return filtered_pairs
+
+
 def match_tasks_and_agents(tasks_data: List[Dict[str, Any]], 
                           agents_data: List[Dict[str, Any]], 
                           tools_data: Dict[str, Any]) -> List[Tuple[Task, AgentConfig, Dict[str, Any]]]:
@@ -312,17 +386,28 @@ def main():
         agents_data = load_agents_data(agents_file)
         tools_data = load_tools_data(tools_file)
 
-        
+
         
         # 3. 匹配任务和智能体
         print("\n🔗 匹配数据...")
         matched_pairs = match_tasks_and_agents(tasks_data, agents_data, tools_data)
         
+        # 4. 过滤已存在的任务
+        print("\n🔍 检查并过滤已存在的任务...")
+        trajectory_1_dir = settings.DATA_DIR / "generated" / "trajectories_1"
+        existing_task_ids = load_existing_trajectory_task_ids(trajectory_1_dir, logger)
+        
+        if existing_task_ids:
+            print(f"发现 {len(existing_task_ids)} 个已存在的任务，将进行过滤")
+            matched_pairs = filter_existing_tasks(matched_pairs, existing_task_ids, logger)
+        else:
+            print("没有发现已存在的任务")
+        
         if not matched_pairs:
-            print("❌ 没有找到有效的任务-智能体匹配对")
+            print("❌ 经过过滤后，没有找到待生成的任务-智能体匹配对")
             return
         
-        # 4. 获取配置
+        # 5. 获取配置
         trajectory_config = settings.GENERATION_CONFIG.get('trajectories', {})
         max_trajectories = trajectory_config.get('max_count', 10)  # 限制生成数量
         max_workers = trajectory_config.get('max_workers', 8)
@@ -335,8 +420,8 @@ def main():
         print(f"\n🎯 生成配置:")
         print(f"  目标轨迹数量: {len(matched_pairs)}")
         print(f"  并发数: {max_workers}")
-        
-        # 5. 准备轨迹生成
+
+        # 6. 准备轨迹生成
         print("\n🔄 开始轨迹生成...")
 
         start_time = datetime.now()

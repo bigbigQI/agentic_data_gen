@@ -64,6 +64,7 @@ class InteractionCoordinator(BaseModule):
         # 更新配置
         config = self.config or {}
         self.max_turns = config.get('max_turns', 20)
+        print(f"max_turns: {self.max_turns}")
             
     def execute_single_interaction(self, task: Task, agent_config: AgentConfig, tools_info: Dict[str, Any]) -> Trajectory:
         """
