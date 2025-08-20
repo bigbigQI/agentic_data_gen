@@ -1,7 +1,6 @@
 # 项目特定文件
 .env
 *.log
-*.md
 *.png
 logs/
 
